@@ -9,7 +9,7 @@ local scene = storyboard.newScene()
 
 -- include Corona's "physics" library
 local physics = require "physics"
-physics.start(); physics.pause()
+physics.start()
 physics.setGravity( 0, 0 )
 
 --include Module RoachCrushEngine library
@@ -21,15 +21,37 @@ local screenW, screenH, halfW = display.contentWidth, display.contentHeight, dis
 local pathImg = "res/img/"
 local crushEngine
 local chef 
+local foodTable = {}
+local score
+local time
+local isPaused = false
 
+background2 = display.newImageRect( pathImg .. "background.jpg", display.contentWidth, display.contentHeight )
+background2:setReferencePoint( display.TopLeftReferencePoint )
+background2.x, background2.y = 0, 0
+background2.isVisible = false
+	
+-- create/position logo/title image on upper-half of the screen
+titleLogo2 = display.newImageRect( pathImg .. "logo.png", 264, 42 )
+titleLogo2:setReferencePoint( display.CenterReferencePoint )
+titleLogo2.x = display.contentWidth * 0.5
+titleLogo2.y = 100
+titleLogo2.isVisible = false
 
 -- Logic game
 
 function onTouch( event )
 	if event.phase == "began" then
-        print( "Touch event began" )
-        crushEngine:moveChef( event )
-        chef.y = event.y
+		if event.y < math.round( screenH*0.07 ) + 31 then
+			crushEngine:moveChef( math.round( screenH*0.07 ) + 31 )
+			chef.y = math.round( screenH*0.07 ) + 31
+        elseif event.y >= math.round( screenH*0.07 ) + ( 7 * 31 + 31) then
+        	crushEngine:moveChef( math.round( screenH*0.07 ) + ( 7 * 31 + 31)  )
+        	chef.y = math.round( screenH*0.07 ) + ( 7 * 31 + 31) 
+        else
+        	crushEngine:moveChef( event.y )
+        	chef.y = event.y
+        end
     end
     return true
 end
@@ -46,16 +68,21 @@ end
 function scene:createScene( event )
 	local group = self.view
 
+	physics.start()
 	-- create a grey rectangle as the backdrop
 	local background = display.newRect( 0, 0, screenW, screenH )
 	background:setFillColor( 128 )
 	
 	-- make a roach (off-screen), position it, and rotate slightly
-	crushEngine = engine.new( 1, 1, screenW, screenH )
+	crushEngine = engine.new( 4, 4, 20000, physics )
 	chef = crushEngine.chef
+	foodTable = crushEngine.foodTable
+	score = crushEngine.lblScore
+	time = crushEngine.lblTime
 
 	-- add physics to the roach
 	physics.addBody( chef )	
+	physics.setDrawMode( "hybrid" )
 	
 	-- define a shape that's slightly shorter than image bounds (set draw mode to "hybrid" or "debug" to see)
 	
@@ -63,11 +90,17 @@ function scene:createScene( event )
 	-- all display objects must be inserted into group
 	group:insert( background )
 	group:insert( chef )
+	group:insert( score )
+	group:insert( time )
+	for i=1,#crushEngine.foodTable do
+		group:insert( crushEngine.foodTable[i] )
+	end
 	-- start logic game
-	timer.performWithDelay( 1000, generateRoachs, crushEngine.roachNumber )
-	timer.performWithDelay( 7000, generateRoachs, crushEngine.roachNumber + 3 )
-	timer.performWithDelay( 50, moveRoachs, 0 )
-	timer.performWithDelay( 2000, crushRoachs, 0 )
+	genTimer = timer.performWithDelay( 2000, generateRoachs, crushEngine.roachNumber)
+	moveTimer = timer.performWithDelay( 50, moveRoachs, 0 )
+	crushTimer = timer.performWithDelay( 750, crushRoachs, 0 )
+	timer.performWithDelay( crushEngine.time + 1000, timeOver)
+	timer.performWithDelay( 1000, elapsedTime, crushEngine.time / 1000 + 1)
 
 	Runtime:addEventListener( "touch", onTouch )
 end
@@ -101,11 +134,39 @@ function generateRoachs()
 end
 
 function moveRoachs()
-	crushEngine:moveRoachs()
+	if not isPaused then
+		crushEngine:moveRoachs()
+	end
 end
 
 function crushRoachs()
-	crushEngine:throwObjects( physics )
+	if not isPaused then
+		crushEngine:throwObjects( physics )
+	end
+end
+
+function timeOver()
+	timer.cancel( genTimer )
+	timer.cancel( moveTimer )
+	timer.cancel( crushTimer )
+    background2.isVisible = true
+	titleLogo2.isVisible = true
+	timer.performWithDelay( 2000, nextLevel )
+end
+
+function nextLevel()
+	crushEngine:nextLevel( physics )
+	background2.isVisible = false
+	titleLogo2.isVisible = false
+	genTimer = timer.performWithDelay( 2000, generateRoachs, crushEngine.roachNumber)
+	moveTimer = timer.performWithDelay( 50, moveRoachs, 0 )
+	crushTimer = timer.performWithDelay( 750, crushRoachs, 0 )
+	timer.performWithDelay( crushEngine.time + 1000, timeOver)
+	timer.performWithDelay( 1000, elapsedTime, crushEngine.time / 1000 + 1)
+end
+
+function elapsedTime()
+	crushEngine:elapsedTime()
 end
 
 -----------------------------------------------------------------------------------------

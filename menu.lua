@@ -19,7 +19,7 @@ local pathImg = "res/img/"
 local function onPlayBtnRelease()
 	
 	-- go to level1.lua scene
-	storyboard.gotoScene( "level1", "fade", 500 )
+	storyboard.gotoScene( "levels", "fade", 500 )
 	
 	return true	-- indicates successful touch
 end
