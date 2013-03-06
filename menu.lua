@@ -36,6 +36,10 @@ end
 function scene:createScene( event )
 	local group = self.view
 
+	local deviceWidth = ( display.contentWidth - (display.screenOriginX * 2) ) / display.contentScaleX
+	local scaleFactor = math.floor( deviceWidth / display.contentWidth )
+	print( scaleFactor )
+
 	-- display a background image
 	local background = display.newImageRect( pathImg .. "background.jpg", display.contentWidth, display.contentHeight )
 	background:setReferencePoint( display.TopLeftReferencePoint )
